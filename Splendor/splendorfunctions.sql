@@ -110,7 +110,7 @@ Select getnumcartesclracc ("green", 1, 1,1);
 Select getnumcartesclracc ("red", 1, 1,1);
 
 ---------------creamos funcion del total del numero del color del numero de
-DROP FUNCTION GetNumGemasClrAcc;
+DROP FUNCTION IF EXISTS GetNumGemasClrAcc;
 DELIMITER $$
 CREATE FUNCTION GetNumGemasClrAcc( 
     _IDColor   ENUM('red','green','blue','white','black', 'golden'), 
@@ -134,7 +134,7 @@ Select GetNumGemasClrAcc ("black", 1, 1,1);
 Select GetNumGemasClrAcc ("red", 1, 1,1,1);
 Select GetNumGemasClrAcc ("green", 1, 1,1,1);
 ----------------------------------------
-DROP FUNCTION  GetPowerClrAcc;
+DROP FUNCTION IF EXISTS GetPowerClrAcc;
 DELIMITER $$
 CREATE FUNCTION GetPowerClrAcc(
         _IDColor    ENUM('red','green','blue','white','black', 'golden'),
@@ -300,13 +300,13 @@ BEGIN
         END IF;
     END IF;
 END$$
-DELIMITER;
+DELIMITER ;
 ---------------------------------
 --OBTENER ACCION ANTERIOR--NO DA ERROR, YA ESTA INTRODUCIDA.
 ---------------------------------
  
 --Procedimiento para obtener la accion previa a una accion en la partida--
-DROP PROCEDURE GetAccionAnterior;
+DROP PROCEDURE IF EXISTS GetAccionAnterior;
 DELIMITER $$
 /* Procedimiento para obtener la accion previa a una accion en la partida */
 CREATE PROCEDURE GetAccionAnterior(
@@ -415,10 +415,11 @@ BEGIN
         WHERE a.IDPartida = _IDPartida
         ORDER BY a.Turno DESC, p.Orden DESC
         LIMIT 1;
-   
 END$$
 DELIMITER;
 ----------------- INTRODUCIDA, NO DA ERROR----
+CALL NuevaAccPass(1);
+
 DROP PROCEDURE IF EXISTS NuevaAccPass;
 DELIMITER $$
 CREATE PROCEDURE NuevaAccPass(
@@ -452,6 +453,8 @@ DELIMITER ;
 
 -----------------
 /* Procediment per enregistrar una acció "take2G" */
+CALL NovaAccTake2G(1,"red");
+
 DROP PROCEDURE IF EXISTS NovaAccTake2G;
 DELIMITER $$
 CREATE PROCEDURE NovaAccTake2G( 
@@ -501,6 +504,8 @@ END $$
 DELIMITER ;
 ----------------------
 /* Procediment per enregistrar una acció "take3G" */
+CALL NovaAccTake3G(1,"black","green","blue");
+
 DROP PROCEDURE IF EXISTS NovaAccTake3G;
 DELIMITER $$
 CREATE PROCEDURE NovaAccTake3G(
@@ -523,7 +528,8 @@ BEGIN
     /* Si la acción es posible */
     IF (NumGemas < 8) THEN
         /* Crear acción */
-        INSERT INTO acciones (IDPartida, Tipo, IDJugador, Turno) VALUES (_IDPartida, 'TK3', IDJugadorSig, TurnoSig);
+        INSERT INTO acciones (IDPartida, Tipo, IDJugador, Turno) 
+        VALUES (_IDPartida, 'TK3', IDJugadorSig, TurnoSig);
         
         /* Copiar cartas jugador acción anterior */
         INSERT INTO cartasparticipant(IDPartida, IDJugador, Turno, IDCartas, Reservada)
@@ -562,7 +568,7 @@ FUNCTION GetNumPuntsAcc(
 ----------------------
 /* Procediment per capturar tots els nobles que corresponguin en una acció en funció de les cartes que es poseeixen */
 DROP PROCEDURE IF EXISTS CapturaNblAcc;
-DELIMITER$$
+DELIMITER $$
 CREATE PROCEDURE CapturaNblAcc(
     _IDPartida TINYINT UNSIGNED,
     _IDJugador INT UNSIGNED,
@@ -590,11 +596,11 @@ BEGIN
 
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET final = -1;
     
-    SELECT GetNumCartesClrAcc ("red", _IDPartida, _IDJugador, _Turno)   INTO numCartasRed;
-    SELECT GetNumCartesClrAcc ("green", _IDPartida, _IDJugador, _Turno) INTO numCartasGreen;
-    SELECT GetNumCartesClrAcc ("blue", _IDPartida, _IDJugador, _Turno)  INTO numCartasBlue;
-    SELECT GetNumCartesClrAcc ("black", _IDPartida, _IDJugador, _Turno) INTO numCartasBlack;
-    SELECT GetNumCartesClrAcc ("white", _IDPartida, _IDJugador, _Turno) INTO numCartasWhite;
+    SELECT GetNumCartesClrAcc("red", _IDPartida, _IDJugador, _Turno)   INTO numCartasRed;
+    SELECT GetNumCartesClrAcc("green", _IDPartida, _IDJugador, _Turno) INTO numCartasGreen;
+    SELECT GetNumCartesClrAcc("blue", _IDPartida, _IDJugador, _Turno)  INTO numCartasBlue;
+    SELECT GetNumCartesClrAcc("black", _IDPartida, _IDJugador, _Turno) INTO numCartasBlack;
+    SELECT GetNumCartesClrAcc("white", _IDPartida, _IDJugador, _Turno) INTO numCartasWhite;
 
     OPEN cIDNoble;
 
@@ -633,18 +639,17 @@ BEGIN
         AND numCartasBlack >= costNobleBlack AND numCartasWhite >= costNobleWhite THEN
 
             UPDATE noblespartida SET IDPartidaAcc = _IDPartida, IDJugador = _IDJugador, Turno = _Turno 
-            WHERE IDPartida = _IDPartida AND IDNoble = IDNbl;
+            WHERE IDNoble = IDNbl;
         END IF;
     END LOOP getNoble;
     CLOSE cIDNoble;
 END$$
+
 ---------------------------------
 ----NO DA ERROR, ESTA INTRODUCIDA--
 ---------------------------------
-DROP FUNCTION GetNewCartaNivelAcc;
+DROP FUNCTION IF EXISTS GetNewCartaNivelAcc;
 DELIMITER $$
-/* Función para obtener una nueva carta de un nivel del mazo de cartas disponibles.
-Si el mazo está vacío devuelve NULL. */
 CREATE FUNCTION GetNewCartaNivelAcc(
 _Nivel      TINYINT UNSIGNED,
 _IDPartida  INT UNSIGNED,
@@ -665,14 +670,14 @@ UNION SELECT IDCartas from cartasparticipant
 WHERE IDPartida = _IDPartida)
 ORDER BY RAND()
 LIMIT 1;
-
 RETURN IDNuevaCrt;
 END $$
-
 DELIMITER ;
 
 /* Afirma o nega si una carta és comprable per un determinat jugador-acció i permet saber si es troba al 'T'auler o a la ma del jugador reservada 'MR'*/
-PROCEDURE CartaComprableAcc(
+DROP PROCEDURE IF EXISTS CartaComprableAcc;
+DELIMITER $$
+CREATE PROCEDURE CartaComprableAcc(
     _IDCartas       VARCHAR(16),
     _IDPartida      TINYINT UNSIGNED,
     _IDJugador      INT UNSIGNED,
@@ -744,7 +749,7 @@ BEGIN
         		LEAVE _loop;
         	END IF;
 
-        	SELECT GetTotalGemasUnColorAcc(_prtId, nombreCosteColor, _jugId, _torn) INTO totalGemasUnColorAccJug;
+        	SELECT GetTotalGemasUnColorAcc(_IDPartida, IDColor, _IDJugador, _Turno) INTO totalGemasUnColorAccJug;
 
         	IF totalGemasUnColorAccJug < cantidadCosteColor THEN
         		SET _comprable = FALSE;
@@ -779,92 +784,195 @@ PROCEDURE NovaAccBuyHolded(
 )
 
 /* Procediment per enregistrar una acció "hold" */
-DROP PROCEDURE IF EXISTS NovaAccHold;
+CALL CrearPrt (1,1,2,3,NULL,10,10,15);
+CALL NovaAccHold(1,"0G2B2R");
+
+    DROP PROCEDURE IF EXISTS NovaAccHold;
+    DELIMITER $$
+    CREATE PROCEDURE NovaAccHold(
+        _IDPartida  INT UNSIGNED,
+        _IDCartas   VARCHAR(16)
+    )
+    BEGIN
+        DECLARE IDJugadorUlt        INT UNSIGNED;
+        DECLARE TurnoUlt            SMALLINT UNSIGNED;
+        DECLARE IDJugadorSig        INT UNSIGNED;
+        DECLARE TurnoSig            SMALLINT UNSIGNED;
+        DECLARE NuevaIDCarta        VARCHAR(16);
+        DECLARE GemasDoradasMesa    TINYINT DEFAULT 0;
+        DECLARE CartasHoldeadas     TINYINT DEFAULT 0;
+        DECLARE CartaEstaEnTablero  BOOLEAN DEFAULT FALSE;
+        DECLARE NivelCartaHoldeada  TINYINT UNSIGNED;
+        
+        START TRANSACTION;
+
+        CALL GetUltimaAccionPrt(_IDPartida, IDJugadorUlt, TurnoUlt);
+        CALL GetAccionSiguiente(_IDPartida, IDJugadorUlt, TurnoUlt, IDJugadorSig, TurnoSig);
+
+        SELECT count(*) INTO CartasHoldeadas
+        FROM cartasparticipant
+        WHERE Reservada = 1 
+            AND IDPartida = _IDPartida
+            AND Turno = TurnoSig -1
+            AND IDJugador = IDJugadorSig; 
+
+        SELECT count(*) INTO CartaEstaEnTablero
+        FROM cartastablero
+        WHERE IDCartas = _IDCartas
+            AND IDPartida = _IDPartida
+            AND IDJugador = IDJugadorUlt
+            AND Turno = TurnoUlt;
+        
+        SELECT GetNumGemasTablerorAccClr(_IDPartida,TurnoUlt,'golden') INTO GemasDoradasMesa;
+
+
+        SELECT Nivel INTO NivelCartaHoldeada
+        FROM cartas
+        WHERE IDCartas = _IDCartas;
+
+        SELECT GetNewCartaNivelAcc(NivelCartaHoldeada, _IDPartida,IDJugadorUlt,TurnoUlt) INTO NuevaIDCarta;
+
+
+        IF CartasHoldeadas < 3 AND GemasDoradasMesa > 0 AND CartaEstaEnTablero = TRUE THEN
+            
+            INSERT INTO acciones (IDPartida, Tipo, IDJugador, Turno) 
+            VALUES (_IDPartida, 'RES', IDJugadorSig, TurnoSig);
+
+            INSERT INTO cartastablero
+            SELECT IDCartas, TurnoSig,_IDPartida,IDJugadorSig
+            FROM cartastablero
+            WHERE Turno = TurnoUlt
+                AND IDJugador = IDJugadorUlt
+                AND IDPartida = _IDPartida
+                AND IDCartas <> _IDCartas;
+
+            IF NuevaIDCarta IS NOT NULL THEN
+                INSERT INTO cartastablero
+                SELECT NuevaIDCarta,TurnoSig,_IDPartida,IDJugadorSig;
+            END IF;
+            
+            INSERT INTO gempos (Variacion, Total, IDColor, Turno, IDPartida, IDJugador)
+            SELECT 0, Total, IDColor, TurnoSig, _IDPartida, IDJugadorSig 
+            FROM gempos 
+            WHERE IDPartida = _IDPartida AND IDJugador = IDJugadorSig AND Turno = TurnoSig -1
+            AND IDColor <> "golden"; 
+
+            INSERT INTO gempos
+            SELECT 1, Total + 1, 'golden', TurnoSig, _IDPartida, IDJugadorSig
+            FROM gempos;
+
+            INSERT INTO cartasparticipant(IDPartida, IDJugador, Turno, IDCartas, Reservada)
+            SELECT _IDPartida, IDJugadorSig, TurnoSig, IDCartas, Reservada
+            FROM cartasparticipant 
+            WHERE IDPartida = _IDPartida AND IDJugador = IDJugadorSig  AND Turno = TurnoSig -1;  
+
+            INSERT INTO cartasparticipant
+            SELECT 1,_IDCartas,TurnoSig,_IDPartida, IDJugadorSig;
+    
+        END IF;
+
+        COMMIT;
+    END$$
+    DELIMITER ;
+/* Procediment per enregistrar una acció "blindHold" que permet fer una reserva d'una carta d'un nivell sense saber quina ens tocarà (a cegues) */
+CALL NuevaAccBlindHold(1,1);
+
+DROP PROCEDURE IF EXISTS NuevaAccBlindHold;
 DELIMITER $$
-CREATE PROCEDURE NovaAccHold(
-    _IDPartida INT UNSIGNED,
-    _IDCartas VARCHAR(16)
-)
+CREATE PROCEDURE NuevaAccBlindHold(
+    _IDPartida INT UNSIGNED, 
+    _Nivel TINYINT UNSIGNED)
 BEGIN
-    DECLARE _IDJugador   INT UNSIGNED;
     DECLARE IDJugadorUlt INT UNSIGNED;
     DECLARE TurnoUlt     INT UNSIGNED;
     DECLARE IDJugadorSig INT UNSIGNED;
     DECLARE TurnoSig     INT UNSIGNED;
-
-START TRANSACTION;
-
-    CALL GetUltimaAccionPrt (_IDPartida, IDJugadorUlt, TurnoUlt);
-    CALL GetAccionSiguiente (_IDPartida, IDJugadorUlt, TurnoUlt, IDJugadorSig, TurnoSig);
-
-    INSERT INTO cartasparticipant(IDPartida, IDJugador, Turno, IDCartas, Reservada)
-    SELECT IDPartida, IDJugadorSig, TurnoSig, IDCartas, Reservada
-    FROM cartasparticipant 
-    WHERE IDPartida = _IDPartida AND IDJugador = IDJugadorSig  AND Turno = TurnoSig -1;  
-    ---aniadir la carta holdeada a cartas del participante---
-
-    INSERT INTO Acciones (IDPartida, IDJugador, Turno, Tipo)
-    VALUES (_IDPartida, IDJugadorSig, TurnoSig, 'RES');
-
-    ---Copio todo menos la que reserva---
-    INSERT INTO CartasTablero (IDCartas, Turno, IDPartida, IDJugador)
-    SELECT IDCartas, TurnoSig, _IDPartida, IDJugadorSig from cartastablero 
-    WHERE IDPartida= _IDPartida AND Turno = TurnoUlt AND IDJugador= IDJugadorUlt AND IDCartas <> _IDCartas;
-
-    ---averiguar el nivel de la carta holdeando /Aniadir nueva carta al tablero, del mismo nivel que la que quito---
-
-    ---Coger una gema dorada---
+    DECLARE GemasDoradasMesa TINYINT DEFAULT 0;
+    DECLARE CartasHoldeadas  TINYINT DEFAULT 0;
+    DECLARE NuevaIDCarta VARCHAR(16);
     
-COMMIT;
-END $$
+    START TRANSACTION;
+
+    CALL GetUltimaAccionPrt(_IDPartida, IDJugadorUlt, TurnoUlt);
+    CALL GetAccionSiguiente(_IDPartida, IDJugadorUlt, TurnoUlt, IDJugadorSig, TurnoSig);
+
+    SELECT COUNT(*) INTO CartasHoldeadas
+    FROM cartasparticipant 
+    WHERE Reservada = 1 
+        AND IDPartida = _IDPartida
+        AND Turno = TurnoSig - 1
+        AND IDJugador = IDJugadorSig; 
+
+    SELECT GetNumGemasTablerorAccClr(_IDPartida,TurnoUlt,'golden') INTO GemasDoradasMesa;
+    SELECT GetNewCartaNivelAcc(NuevaIDCarta, _IDPartida,IDJugadorSig,TurnoSig) INTO NuevaIDCarta;
+    
+    IF CartasHoldeadas < 3 AND GemasDoradasMesa > 0 AND NuevaIDCarta IS NOT NULL THEN
+    
+        INSERT INTO acciones (IDPartida, Tipo, IDJugador, Turno) 
+        VALUES (_IDPartida,'RES', IDJugadorSig, TurnoSig);
+
+        INSERT INTO cartastablero
+        SELECT IDCartas, TurnoSig, _IDPartida, _IDJugadorSig
+        FROM CartasTablero
+        WHERE Turno = TurnoUlt
+            AND IDJugador = IDJugadorUlt
+            AND IDPartida = _IDPartida;
+
+        INSERT INTO gempos
+        SELECT 0, Total, IDColor, TurnoSig, IDPartida, IDJugadorSig
+        FROM gempos
+        WHERE IDJugador = IDJugadorSig
+            AND Turno = TurnoSig - 1
+            AND IDPartida = _IDPartida
+            AND IDColor <> 'golden';
+
+        INSERT INTO gempos
+        SELECT 1, 1, 'golden', TurnoSig, IDPartida, IDJugadorSig;
+        
+        INSERT INTO cartasparticipant
+        SELECT Reservada,IDCartas, TurnoSig, _IDPartida, IDJugadorSig
+        FROM cartasparticipant
+        WHERE IDJugador = IDJugadorSig
+            AND Turno = TurnoSig - 1
+            AND IDPartida = _IDPartida;
+
+        INSERT INTO cartasparticipant
+        SELECT 1,NuevaIDCarta, TurnoSig, _IDPartida, IDJugadorSig;
+    END IF;
+    COMMIT;
+END$$
 DELIMITER ;
 
-
-
-
-
-
 /* Funció que permet saber quantes gemes disponibles al tauler de cada color, en un moment-acció del joc incloent el daurat. Pot ser un torn incomplet */
-FUNCTION GetNumGemasTablerorAccClr(
-    _IDPartida INT UNSIGNED,
-    _Turno     TINYINT UNSIGNED,
+DROP FUNCTION IF EXISTS GetNumGemasTablerorAccClr;
+DELIMITER $$
+CREATE FUNCTION GetNumGemasTablerorAccClr(
+    _IDPartida TINYINT  UNSIGNED,
+    _Turno     SMALLINT UNSIGNED,
     _IDColor   ENUM('red','green','blue','white','black', 'golden')
-
 ) RETURNS TINYINT UNSIGNED
 
 BEGIN
-DECLARE numtotal TINYINT UNSIGNED;
-DECLARE numcogidas TINYINT UNSIGNED DEFAULT 0;
+    DECLARE numtotal     TINYINT UNSIGNED;
+    DECLARE numcogidas   TINYINT UNSIGNED DEFAULT 0;
 
-    SELECT GetNumGemesClrEnJuego (_IDColor, _IDPartida) INTO numtotal
+    SELECT GetNumGemesClrEnJuego (_IDPartida, _IDColor) INTO numtotal;
 
-    DECLARE IDJugadorUlt INT UNSIGNED;
-    DECLARE TurnoUlt     INT UNSIGNED;
-    DECLARE IDJugadorSig INT UNSIGNED;
-    DECLARE TurnoSig     INT UNSIGNED;
-    
-    CALL GetUltimaAccionPrt (_IDPartida, IDJugadorUlt, TurnoUlt);
-    CALL GetAccionSiguiente (_IDPartida, IDJugadorUlt, TurnoUlt, IDJugadorSig, TurnoSig);
-
-    SELECT sum(Total) INTO numcogidas
-    from gempos
+    SELECT SUM(Total) INTO numcogidas
+    FROM gempos
     WHERE IDColor = _IDColor AND IDPartida = _IDPartida AND
-        ( Turno = TurnoUlt
+        ( Turno = _Turno
         OR
-        ( Turno = TurnoUlt -1
+        ( Turno = _Turno - 1
         AND IDJugador NOT IN (
             SELECT IDJugador FROM acciones
-            WHERE IDPartida = _IDPartida AND Turno = _TurnoActual
+            WHERE IDPartida = _IDPartida AND Turno = _Turno
+            )
         )
-
-        )
-    )
-
+    );
+    RETURN numtotal - numcogidas;
 END $$
-
-/* Procediment per enregistrar una acció "blindHold" que permet fer una reserva d'una carta d'un nivell sense saber quina ens tocarà (a cegues) */
-PROCEDURE NovaAccBlindHold(_prtId INT UNSIGNED, _nivell TINYINT UNSIGNED)
-
+DELIMITER ;
 --------------------------------------------
 ---CARGAR IMAGENES EN LA BASE DE DATOS---
 /*
